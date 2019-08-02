@@ -59,10 +59,10 @@ impl IPHeader {
 
     pub fn get_destination_address_str(&self) -> String {
         format!("{}.{}.{}.{}",
-                (self.destination_address & 0xFF000000) >> 24,
-                (self.destination_address & 0x00FF0000) >> 16,
-                (self.destination_address & 0x0000FF00) >> 8,
-                (self.destination_address & 0x000000FF),
+            (self.destination_address & 0xFF000000) >> 24,
+            (self.destination_address & 0x00FF0000) >> 16,
+            (self.destination_address & 0x0000FF00) >> 8,
+            (self.destination_address & 0x000000FF),
         )
     }
 
