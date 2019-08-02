@@ -20,6 +20,10 @@ mod tests {
 
         let request_packet = Packet::parse(&request[4..], 52 - 4);
 
+        assert_eq!(request_packet.is_some(), true);
+
+        let request_packet = request_packet.unwrap();
+
         assert_eq!(request_packet.ip_header.version, 4);
         assert_eq!(request_packet.ip_header.total_length, 60);
         assert_eq!(request_packet.ip_header.header_length, 20);

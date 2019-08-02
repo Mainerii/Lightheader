@@ -10,15 +10,20 @@ pub struct Packet {
 
 impl Packet {
 
-    pub fn parse(bytes: &[u8], bytes_read: usize) -> Packet {
+    pub fn parse(bytes: &[u8], bytes_read: usize) -> Option<Packet> {
 
         let ip_header = IPHeader::parse(bytes);
-        let tcp_header = TCPHeader::parse(&bytes[ip_header.header_length as usize .. bytes_read]);
+        if !ip_header.validate() { () }
 
-        Packet {
-            ip_header,
-            tcp_header,
-        }
+        let tcp_header = TCPHeader::parse(&bytes[ip_header.header_length as usize .. bytes_read]);
+        if !tcp_header.validate() { () }
+
+        Some(
+            Packet {
+                ip_header,
+                tcp_header,
+            }
+        )
 
     }
 

@@ -44,7 +44,9 @@ impl IPHeader {
 
     pub fn validate(&self) -> bool {
 
-        true
+        self.version == 4 &&
+        self.header_length >= 20 &&
+        self.total_length >= self.header_length as u16
 
     }
 
