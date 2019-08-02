@@ -3,8 +3,8 @@ pub use crate::headers::tcp_header::TCPHeader;
 
 pub struct Packet {
 
-    ip_header: IPHeader,
-    tcp_header: TCPHeader,
+    pub ip_header: IPHeader,
+    pub tcp_header: TCPHeader,
 
 }
 
@@ -13,7 +13,7 @@ impl Packet {
     pub fn parse(bytes: &[u8]) -> Packet {
 
         Packet {
-            ip_header: IPHeader::parse(&bytes[..]),
+            ip_header: IPHeader::parse(bytes),
             tcp_header: TCPHeader::parse(&bytes[..]),
         }
 
