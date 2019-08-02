@@ -10,11 +10,14 @@ pub struct Packet {
 
 impl Packet {
 
-    pub fn parse(bytes: &[u8]) -> Packet {
+    pub fn parse(bytes: &[u8], bytes_read: usize) -> Packet {
+
+        let ip_header = IPHeader::parse(bytes);
+        let tcp_header = TCPHeader::parse(&bytes[ip_header.header_length as usize .. bytes_read]);
 
         Packet {
-            ip_header: IPHeader::parse(bytes),
-            tcp_header: TCPHeader::parse(&bytes[..]),
+            ip_header,
+            tcp_header,
         }
 
     }
