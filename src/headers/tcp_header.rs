@@ -86,13 +86,13 @@ impl TCPHeader {
         }
 
         // Add pseudo header sum
-        sum += (ip_header.source_address & 0xFFFF0000) >> 16;        // Highest 2 bytes of source address
-        sum += ip_header.source_address & 0xFFFF;                    // Lowest 2 bytes of source address
-        sum += (ip_header.destination_address & 0xFFFF0000) >> 16;   // Highest 2 bytes of destination address
-        sum += ip_header.destination_address & 0xFFFF;               // Lowest 2 bytes of destination address
-        sum += 6 + ip_header.get_data_length() as u32;               // TCP protocol number + TCP data length
+        sum += ip_header.source_address >> 16;              // Highest 2 bytes of source address
+        sum += ip_header.source_address & 0xFFFF;           // Lowest 2 bytes of source address
+        sum += ip_header.destination_address >> 16;         // Highest 2 bytes of destination address
+        sum += ip_header.destination_address & 0xFFFF;      // Lowest 2 bytes of destination address
+        sum += 6 + ip_header.get_data_length() as u32;      // TCP protocol number + TCP data length
 
-        while sum >> 16 > 0 {
+        while sum >> 16 != 0 {
             sum = (sum & 0xFFFF) + (sum >> 16);
         }
 

@@ -9,7 +9,7 @@ mod tests {
     #[test]
     fn test_request_parsing() {
 
-        let request: [u8; 65] = [
+        let request: [u8; 64] = [
 
             0x00, 0x00, 0x08, 0x00,                                     // TUN/TAP https://www.kernel.org/doc/Documentation/networking/tuntap.txt
 
@@ -22,7 +22,6 @@ mod tests {
             0x0C, 0xCA, 0x00, 0x00, 0x02, 0x04, 0x05, 0xB4,
             0x04, 0x02, 0x08, 0x0A, 0xC0, 0x1B, 0x8C, 0x50,
             0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x03, 0x07,
-            0x00,
 
         ];
 
@@ -35,9 +34,9 @@ mod tests {
         assert_eq!(request_packet.ip_header.total_length, 60);
         assert_eq!(request_packet.ip_header.header_length, 20);
         assert_eq!(request_packet.ip_header.get_data_length(), 40);
-        assert_eq!(request_packet.ip_header.source_address, 3232235570);
+        assert_eq!(request_packet.ip_header.source_address, 0xC0A80032);
         assert_eq!(request_packet.ip_header.get_source_address_str(), "192.168.0.50");
-        assert_eq!(request_packet.ip_header.destination_address, 3232235522);
+        assert_eq!(request_packet.ip_header.destination_address, 0xC0A80002);
         assert_eq!(request_packet.ip_header.get_destination_address_str(), "192.168.0.2");
 
         assert_eq!(request_packet.tcp_header.source_port, 46046);
@@ -52,7 +51,7 @@ mod tests {
         assert_eq!(request_packet.tcp_header.syn, true);
         assert_eq!(request_packet.tcp_header.fin, false);
         assert_eq!(request_packet.tcp_header.window, 64240);
-        assert_eq!(request_packet.tcp_header.checksum, 3274);
+        assert_eq!(request_packet.tcp_header.checksum, 0xCCA);
 
     }
 
