@@ -13,10 +13,11 @@ impl Packet {
     pub fn parse(bytes: &[u8], bytes_read: usize) -> Option<Packet> {
 
         let ip_header = IPHeader::parse(bytes);
-        if !ip_header.validate() { () }
+        if !ip_header.validate() { return None; }
 
-        let tcp_header = TCPHeader::parse(&bytes[ip_header.header_length as usize .. bytes_read]);
-        if !tcp_header.validate() { () }
+        let tcp_header_bytes = &bytes[ip_header.header_length as usize .. ip_header.total_length as usize];
+        let tcp_header = TCPHeader::parse(tcp_header_bytes);
+        if !tcp_header.validate(&ip_header, tcp_header_bytes) { return None; }
 
         Some(
             Packet {

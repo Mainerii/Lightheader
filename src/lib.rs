@@ -9,19 +9,25 @@ mod tests {
     #[test]
     fn test_request_parsing() {
 
-        let request: [u8; 52] = [
-            0, 0, 8, 0, 69, 0, 0, 60, 22, 108,
-            64, 0, 64, 6, 162, 203, 192, 168, 0,
-            50, 192, 168, 0, 2, 129, 218, 1, 187, 71,
-            198, 111, 179, 0, 0, 0, 0, 160, 2, 250, 240,
-            43, 183, 22, 212, 0, 0, 0, 0, 1, 3, 3, 7
-        ];
+        let request: [u8; 64] = [
 
+            0x00, 0x00, 0x08, 0x00,                                     // TUN/TAP https://www.kernel.org/doc/Documentation/networking/tuntap.txt
+
+            0x45, 0x00, 0x00, 0x3C, 0xE1, 0x28, 0x40, 0x00,             // Internet header
+            0x40, 0x06, 0xD8, 0x0E, 0xC0, 0xA8, 0x00, 0x32,
+            0xC0, 0xA8, 0x00, 0x02,
+
+            0xB3, 0xDE, 0x01, 0xBB, 0x99, 0xAF, 0x23, 0x0B,             // TCP header
+            0x00, 0x00, 0x00, 0x00, 0xA0, 0x02, 0xFA, 0xF0,
+            0x0C, 0xCA, 0x00, 0x00, 0x02, 0x04, 0x05, 0xB4,
+            0x04, 0x02, 0x08, 0x0A, 0xC0, 0x1B, 0x8C, 0x50,
+            0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x03, 0x07,
+
+        ];
 
         let request_packet = Packet::parse(&request[4..], 52 - 4);
 
         assert_eq!(request_packet.is_some(), true);
-
         let request_packet = request_packet.unwrap();
 
         assert_eq!(request_packet.ip_header.version, 4);
@@ -33,9 +39,9 @@ mod tests {
         assert_eq!(request_packet.ip_header.destination_address, 3232235522);
         assert_eq!(request_packet.ip_header.get_destination_address_str(), "192.168.0.2");
 
-        assert_eq!(request_packet.tcp_header.source_port, 33242);
+        assert_eq!(request_packet.tcp_header.source_port, 46046);
         assert_eq!(request_packet.tcp_header.destination_port, 443);
-        assert_eq!(request_packet.tcp_header.sequence_number, 1204187059);
+        assert_eq!(request_packet.tcp_header.sequence_number, 2578391819);
         assert_eq!(request_packet.tcp_header.acknowledgement_number, 0);
         assert_eq!(request_packet.tcp_header.data_offset, 40);
         assert_eq!(request_packet.tcp_header.urg, false);
@@ -45,6 +51,7 @@ mod tests {
         assert_eq!(request_packet.tcp_header.syn, true);
         assert_eq!(request_packet.tcp_header.fin, false);
         assert_eq!(request_packet.tcp_header.window, 64240);
+        assert_eq!(request_packet.tcp_header.checksum, 3274);
 
     }
 

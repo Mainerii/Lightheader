@@ -1,5 +1,6 @@
 // Transmission Control Protocol header
 // https://tools.ietf.org/html/rfc793
+// https://www.netfor2.com/tcpsum.htm
 
 //  0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -21,6 +22,8 @@
 //  |                             data                              |
 //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+use crate::headers::ip_header::IPHeader;
+
 #[derive(Debug)]
 pub struct TCPHeader {
 
@@ -36,6 +39,7 @@ pub struct TCPHeader {
     pub syn: bool,
     pub fin: bool,
     pub window: u16,
+    pub checksum: u16,
 
 }
 
@@ -56,13 +60,42 @@ impl TCPHeader {
             syn: (bytes[13] & 0b00000010) >> 1 == 1,
             fin: (bytes[13] & 0b00000001) == 1,
             window: u16::from_be_bytes([bytes[14], bytes[15]]),
+            checksum: u16::from_be_bytes([bytes[16], bytes[17]]),
         }
 
     }
 
-    pub fn validate(&self) -> bool {
+    pub fn validate(&self, ip_header: &IPHeader, bytes: &[u8]) -> bool {
 
-        true
+        let data_length = bytes.len();
+
+        let mut sum: u32 = 0;
+
+        // Calculate sum of all TCP bytes as 16 bit words
+        for i in (0 .. data_length).step_by(2) {
+            if i == 16 {
+                // Skip checksum
+                continue
+            }
+            sum += u16::from_be_bytes([bytes[i], bytes[i + 1]]) as u32;
+        }
+
+        if data_length % 2 == 1 {
+            sum += u16::from_be_bytes([bytes[data_length - 1], 0x0]) as u32;
+        }
+
+        // Add pseudo header sum
+        sum += (ip_header.source_address & 0xFFFF0000) >> 16;        // Highest 2 bytes of source address
+        sum += ip_header.source_address & 0xFFFF;                    // Lowest 2 bytes of source address
+        sum += (ip_header.destination_address & 0xFFFF0000) >> 16;   // Highest 2 bytes of destination address
+        sum += ip_header.destination_address & 0xFFFF;               // Lowest 2 bytes of destination address
+        sum += 6 + ip_header.get_data_length() as u32;               // TCP protocol number + TCP data length
+
+        while sum >> 16 > 0 {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+
+        self.checksum == !sum as u16
 
     }
 
