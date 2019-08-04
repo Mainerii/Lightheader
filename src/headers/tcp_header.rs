@@ -24,6 +24,8 @@
 
 use crate::headers::ip_header::IPHeader;
 
+use std::vec::Vec;
+
 #[derive(Debug)]
 pub struct TCPHeader {
 
@@ -40,6 +42,8 @@ pub struct TCPHeader {
     pub fin: bool,
     pub window: u16,
     pub checksum: u16,
+    pub urgent_ptr: u16,
+    pub options: Vec<u8>,
 
 }
 
@@ -47,12 +51,18 @@ impl TCPHeader {
 
     pub fn parse(bytes: &[u8]) -> TCPHeader {
 
+        let data_offset = ((bytes[12] & 0xF0) >> 4) * 4;
+
+        let mut options: Vec<u8> = Vec::new();
+        for i in 40 .. data_offset as usize - 1 {
+            options.push(bytes[i]);
+        }
+
         TCPHeader {
             source_port: u16::from_be_bytes([bytes[0], bytes[1]]),
             destination_port: u16::from_be_bytes([bytes[2], bytes[3]]),
             sequence_number: u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]),
             acknowledgement_number: u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]),
-            data_offset: ((bytes[12] & 0xF0) >> 4) * 4,
             urg: (bytes[13] & 0b00100000) >> 5 == 1,
             ark: (bytes[13] & 0b00010000) >> 4 == 1,
             psh: (bytes[13] & 0b00001000) >> 3 == 1,
@@ -61,6 +71,9 @@ impl TCPHeader {
             fin: (bytes[13] & 0b00000001) == 1,
             window: u16::from_be_bytes([bytes[14], bytes[15]]),
             checksum: u16::from_be_bytes([bytes[16], bytes[17]]),
+            urgent_ptr: u16::from_be_bytes([bytes[18], bytes[19]]),
+            data_offset,
+            options
         }
 
     }

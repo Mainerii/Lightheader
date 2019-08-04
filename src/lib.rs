@@ -52,6 +52,8 @@ mod tests {
         assert_eq!(request_packet.tcp_header.fin, false);
         assert_eq!(request_packet.tcp_header.window, 64240);
         assert_eq!(request_packet.tcp_header.checksum, 0xCCA);
+        assert_eq!(request_packet.tcp_header.urgent_ptr, 0);
+        assert_eq!(request_packet.tcp_header.options, []);
 
     }
 
