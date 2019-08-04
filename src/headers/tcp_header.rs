@@ -68,11 +68,12 @@ impl TCPHeader {
     pub fn validate(&self, ip_header: &IPHeader, bytes: &[u8]) -> bool {
 
         let data_length = bytes.len();
+        let padding = data_length % 2;
 
         let mut sum: u32 = 0;
 
         // Calculate sum of all TCP bytes as 16 bit words
-        for i in (0 .. data_length).step_by(2) {
+        for i in (0 .. data_length - padding).step_by(2) {
             if i == 16 {
                 // Skip checksum
                 continue
@@ -80,7 +81,7 @@ impl TCPHeader {
             sum += u16::from_be_bytes([bytes[i], bytes[i + 1]]) as u32;
         }
 
-        if data_length % 2 == 1 {
+        if padding == 1 {
             sum += u16::from_be_bytes([bytes[data_length - 1], 0x0]) as u32;
         }
 
