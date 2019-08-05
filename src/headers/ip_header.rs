@@ -17,6 +17,8 @@
 //  |                    Options                    |    Padding    |
 //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+use crate::headers::tcp_header::TCPHeader;
+
 #[derive(Debug)]
 pub struct IPHeader {
 

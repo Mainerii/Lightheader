@@ -9,7 +9,14 @@ mod tests {
     #[test]
     fn test_request_parsing() {
 
-        let request: [u8; 64] = [
+        const bytes_in: usize = 64;
+
+        // These would be set by TUN/TAP in actual program
+        let mut buffer: [u8; 1504] = [0; 1504];
+        let bytes_read = bytes_in;
+
+        // Fake TUN/TAP request
+        let request: [u8; bytes_in] = [
 
             0x00, 0x00, 0x08, 0x00,                                     // TUN/TAP https://www.kernel.org/doc/Documentation/networking/tuntap.txt
 
@@ -25,7 +32,11 @@ mod tests {
 
         ];
 
-        let request_packet = Packet::parse(&request[4..], 52 - 4);
+        for (index, byte) in request.iter().enumerate() {
+            buffer[index] = *byte;
+        }
+
+        let request_packet = Packet::parse(buffer, bytes_read);
 
         assert_eq!(request_packet.is_some(), true);
         let request_packet = request_packet.unwrap();
