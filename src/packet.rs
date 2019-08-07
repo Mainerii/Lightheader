@@ -2,21 +2,31 @@
 
 pub use crate::headers::ip_header::IPHeader;
 pub use crate::headers::tcp_header::TCPHeader;
+use crate::headers::ip_header::IPHeaderBuilder;
+use crate::headers::tcp_header::TCPHeaderBuilder;
 
 pub struct Packet {
 
     pub ip_header: IPHeader,
     pub tcp_header: TCPHeader,
-    pub data: [u8; 1504],
+    pub bytes: Vec<u8>,
+
+}
+
+pub struct PacketBuilder {
+
+    pub ip_header_builder: IPHeaderBuilder,
+    pub tcp_header_builder: TCPHeaderBuilder,
+    pub bytes: Vec<u8>,
 
 }
 
 impl Packet {
 
-    pub fn parse(data: [u8; 1504], bytes_read: usize) -> Option<Packet> {
+    pub fn parse(bytes: [u8; 1504], bytes_read: usize) -> Option<Packet> {
 
-        let eth_flags: u16 = u16::from_be_bytes([data[0], data[1]]);    // First 2 bytes are TUN/TAP flags
-        let eth_proto: u16 = u16::from_be_bytes([data[2], data[3]]);    // Second 2 bytes are TUN/TAP proto
+        let eth_flags: u16 = u16::from_be_bytes([bytes[0], bytes[1]]);    // First 2 bytes are TUN/TAP flags
+        let eth_proto: u16 = u16::from_be_bytes([bytes[2], bytes[3]]);    // Second 2 bytes are TUN/TAP proto
 
         if eth_proto != 0x0800 {
             // Skip if not IPv4
@@ -24,7 +34,7 @@ impl Packet {
         }
 
         // Parse internet header
-        let ip_header = IPHeader::parse(&data[4 .. bytes_read]);
+        let ip_header = IPHeader::parse(&bytes[4 .. bytes_read]);
 
         if !ip_header.validate() {
             // Skip if internet header is invalid
@@ -32,7 +42,7 @@ impl Packet {
         }
 
         // Slice bytes containing TCP header
-        let tcp_header_bytes = &data[4 + ip_header.header_length as usize .. 4 + ip_header.total_length as usize];
+        let tcp_header_bytes = &bytes[4 + ip_header.header_length as usize .. 4 + ip_header.total_length as usize];
 
         // Parse TCP header
         let tcp_header = TCPHeader::parse(tcp_header_bytes);
@@ -46,7 +56,7 @@ impl Packet {
             Packet {
                 ip_header,
                 tcp_header,
-                data,
+                bytes: (&bytes[4 .. bytes_read]).to_vec(),
             }
         )
 
@@ -55,7 +65,31 @@ impl Packet {
     pub fn get_tcp_data(&self) -> &[u8] {
 
         // From TUN/TAP data length + data offset to TUN/TAP data length to packet end
-        &self.data[4 + self.tcp_header.data_offset as usize .. 4 + self.ip_header.total_length as usize]
+        &self.bytes[4 + self.tcp_header.data_offset as usize .. 4 + self.ip_header.total_length as usize]
+
+    }
+
+}
+
+impl PacketBuilder {
+
+    pub fn new() -> PacketBuilder {
+
+        PacketBuilder {
+            bytes: vec!(),
+            ip_header_builder: IPHeaderBuilder::new(),
+            tcp_header_builder: TCPHeaderBuilder::new(),
+        }
+
+    }
+
+    pub fn build(&self) -> Packet {
+
+        Packet {
+            bytes: self.bytes.clone(),
+            ip_header: self.ip_header_builder.build(self.bytes.len() as u16),
+            tcp_header: self.tcp_header_builder.build(&self.ip_header_builder, &self.bytes[..]),
+        }
 
     }
 

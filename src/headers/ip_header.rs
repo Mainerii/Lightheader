@@ -17,14 +17,20 @@
 //  |                    Options                    |    Padding    |
 //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-use crate::headers::tcp_header::TCPHeader;
-
 #[derive(Debug)]
 pub struct IPHeader {
 
     pub version: u8,            // Internet header version (should be 4)
     pub total_length: u16,      // Whole packet length
     pub header_length: u8,      // Header length in bytes
+    pub source_address: u32,
+    pub destination_address: u32,
+
+}
+
+#[derive(Debug)]
+pub struct IPHeaderBuilder {
+
     pub source_address: u32,
     pub destination_address: u32,
 
@@ -76,3 +82,27 @@ impl IPHeader {
 
 }
 
+impl IPHeaderBuilder {
+
+    pub fn new() -> IPHeaderBuilder {
+
+        IPHeaderBuilder {
+            source_address: 0,
+            destination_address: 0,
+        }
+
+    }
+
+    pub fn build(&self, data_length: u16) -> IPHeader {
+
+        IPHeader {
+            version: 4,
+            header_length: 0,
+            total_length: 0,
+            source_address: 0,
+            destination_address: 0,
+        }
+
+    }
+
+}

@@ -22,18 +22,20 @@
 //  |                             data                              |
 //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-use crate::headers::ip_header::IPHeader;
+use crate::headers::ip_header::{IPHeader, IPHeaderBuilder};
 
 use std::vec::Vec;
 
 #[derive(Debug)]
 pub struct TCPHeader {
 
+    pub bytes: Vec<u8>,
+
     pub source_port: u16,
     pub destination_port: u16,
     pub sequence_number: u32,
     pub acknowledgement_number: u32,
-    pub data_offset: u8,                // Beginning of the data in bytes
+    pub data_offset: u8,
     pub urg: bool,
     pub ark: bool,
     pub psh: bool,
@@ -47,18 +49,32 @@ pub struct TCPHeader {
 
 }
 
+pub struct TCPHeaderBuilder {
+
+    pub source_port: u16,
+    pub destination_port: u16,
+    pub sequence_number: u32,
+    pub acknowledgement_number: u32,
+    pub urg: bool,
+    pub ark: bool,
+    pub psh: bool,
+    pub rst: bool,
+    pub syn: bool,
+    pub fin: bool,
+    pub window: u16,
+    pub urgent_ptr: u16,
+    pub options: Vec<u8>,
+
+}
+
 impl TCPHeader {
 
     pub fn parse(bytes: &[u8]) -> TCPHeader {
 
         let data_offset = ((bytes[12] & 0xF0) >> 4) * 4;
 
-        let mut options: Vec<u8> = Vec::new();
-        for i in 40 .. data_offset as usize - 1 {
-            options.push(bytes[i]);
-        }
-
         TCPHeader {
+            bytes: bytes[.. data_offset as usize - 1].to_vec(),
             source_port: u16::from_be_bytes([bytes[0], bytes[1]]),
             destination_port: u16::from_be_bytes([bytes[2], bytes[3]]),
             sequence_number: u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]),
@@ -72,8 +88,8 @@ impl TCPHeader {
             window: u16::from_be_bytes([bytes[14], bytes[15]]),
             checksum: u16::from_be_bytes([bytes[16], bytes[17]]),
             urgent_ptr: u16::from_be_bytes([bytes[18], bytes[19]]),
+            options: vec!(),
             data_offset,
-            options
         }
 
     }
@@ -113,5 +129,93 @@ impl TCPHeader {
 
     }
 
+    pub fn get_bytes(&self) -> &[u8] {
+
+        &self.bytes[.. self.data_offset as usize]
+
+    }
+
 }
 
+impl TCPHeaderBuilder {
+
+    pub fn new() -> TCPHeaderBuilder {
+
+        TCPHeaderBuilder {
+            source_port: 0,
+            destination_port: 0,
+            sequence_number: 0,
+            acknowledgement_number: 0,
+            urg: false,
+            ark: false,
+            psh: false,
+            rst: false,
+            syn: false,
+            fin: false,
+            window: 0,
+            urgent_ptr: 0,
+            options: vec!(),
+        }
+
+    }
+
+    pub fn build(&self, ip_header_builder: &IPHeaderBuilder, data: &[u8]) -> TCPHeader {
+
+        let padding = 4 - (self.options.len() % 4);
+        let data_offset = 20 + self.options.len() + padding;
+
+        let source_port = self.source_port.to_be_bytes();
+        let destination_port = self.destination_port.to_be_bytes();
+        let sequence_number = self.sequence_number.to_be_bytes();
+        let acknowledgement_number = self.acknowledgement_number.to_be_bytes();
+        let window = self.window.to_be_bytes();
+        let urgent_ptr = self.urgent_ptr.to_be_bytes();
+
+        let mut flags: u8 = 0;
+        flags += (self.urg as u8) << 5;
+        flags += (self.ark as u8) << 4;
+        flags += (self.psh as u8) << 3;
+        flags += (self.rst as u8) << 2;
+        flags += (self.syn as u8) << 1;
+        flags += self.fin as u8;
+
+        let mut bytes: Vec<u8> = vec!(
+            source_port[0], source_port[1], destination_port[0], destination_port[1],
+            sequence_number[0], sequence_number[1], sequence_number[2], sequence_number[3],
+            acknowledgement_number[0], acknowledgement_number[1], acknowledgement_number[2], acknowledgement_number[3],
+            ((data_offset / 4) << 4) as u8, flags, window[0], window[1],
+            0, 0, urgent_ptr[0], urgent_ptr[1],
+        );
+
+        for &option in self.options.iter() {
+            bytes.push(option);
+        }
+
+        if padding > 0 {
+            for i in 0 .. padding {
+                bytes.push(0);
+            }
+        }
+
+        TCPHeader {
+            bytes,
+            source_port: self.source_port,
+            destination_port: self.destination_port,
+            sequence_number: self.sequence_number,
+            acknowledgement_number: self.acknowledgement_number,
+            data_offset: data_offset as u8,
+            urg: self.urg,
+            ark: self.ark,
+            psh: self.psh,
+            rst: self.rst,
+            syn: self.syn,
+            fin: self.fin,
+            window: self.window,
+            checksum: 0,
+            urgent_ptr: self.urgent_ptr,
+            options: self.options.clone(),
+        }
+
+    }
+
+}

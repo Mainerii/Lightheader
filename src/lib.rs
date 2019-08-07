@@ -1,10 +1,11 @@
 pub mod packet;
 pub mod headers;
+//pub mod packet_builder;
 
 #[cfg(test)]
 mod tests {
 
-    use crate::packet::Packet;
+    use crate::packet::{Packet, PacketBuilder};
 
     #[test]
     fn test_request_parsing() {
@@ -36,7 +37,7 @@ mod tests {
             buffer[index] = *byte;
         }
 
-        let request_packet = Packet::parse(buffer, bytes_read);
+        let request_packet = Packet::parse(buffer, bytes_in);
 
         assert_eq!(request_packet.is_some(), true);
         let request_packet = request_packet.unwrap();
@@ -64,7 +65,35 @@ mod tests {
         assert_eq!(request_packet.tcp_header.window, 64240);
         assert_eq!(request_packet.tcp_header.checksum, 0xCCA);
         assert_eq!(request_packet.tcp_header.urgent_ptr, 0);
-        assert_eq!(request_packet.tcp_header.options, []);
+
+    }
+
+    #[test]
+    fn test_packet_building() {
+
+        let mut packet_builder = PacketBuilder::new();
+
+        packet_builder.tcp_header_builder.source_port = 46046;
+        packet_builder.tcp_header_builder.destination_port = 443;
+        packet_builder.tcp_header_builder.sequence_number = 2578391819;
+        packet_builder.tcp_header_builder.acknowledgement_number = 50;
+        packet_builder.tcp_header_builder.urg = true;
+        packet_builder.tcp_header_builder.ark = false;
+        packet_builder.tcp_header_builder.psh = true;
+        packet_builder.tcp_header_builder.rst = false;
+        packet_builder.tcp_header_builder.syn = true;
+        packet_builder.tcp_header_builder.fin = false;
+        packet_builder.tcp_header_builder.window = 64240;
+        packet_builder.tcp_header_builder.urgent_ptr = 50;
+        packet_builder.tcp_header_builder.options.push(128);
+
+        let packet = packet_builder.build();
+
+        assert_eq!(packet.tcp_header.get_bytes(), [
+            0xB3, 0xDE, 0x01, 0xBB, 0x99, 0xAF, 0x23, 0x0B,
+            0x00, 0x00, 0x00, 0x32, 0x60, 0x2A, 0xFA, 0xF0,
+            0x00, 0x00, 0x00, 0x32, 0x80, 0x00, 0x00, 0x00,
+        ]);
 
     }
 
