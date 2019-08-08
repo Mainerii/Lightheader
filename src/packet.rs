@@ -85,10 +85,13 @@ impl PacketBuilder {
 
     pub fn build(&self) -> Packet {
 
+        let tcp_header = self.tcp_header_builder.build(&self.ip_header_builder, &self.bytes[..]);
+        let ip_header = self.ip_header_builder.build(&tcp_header, self.bytes.len() as u16);
+
         Packet {
             bytes: self.bytes.clone(),
-            ip_header: self.ip_header_builder.build(self.bytes.len() as u16),
-            tcp_header: self.tcp_header_builder.build(&self.ip_header_builder, &self.bytes[..]),
+            ip_header,
+            tcp_header,
         }
 
     }

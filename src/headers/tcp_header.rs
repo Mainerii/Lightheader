@@ -161,7 +161,7 @@ impl TCPHeaderBuilder {
 
     pub fn build(&self, ip_header_builder: &IPHeaderBuilder, data: &[u8]) -> TCPHeader {
 
-        let padding = 4 - (self.options.len() % 4);
+        let padding = (4 - self.options.len() % 4) % 4;
         let data_offset = 20 + self.options.len() + padding;
 
         let source_port = self.source_port.to_be_bytes();
