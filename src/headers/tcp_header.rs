@@ -69,32 +69,40 @@ pub struct TCPHeaderBuilder {
 
 impl TCPHeader {
 
-    pub fn parse(bytes: &[u8]) -> TCPHeader {
+    pub fn parse(ip_header: &IPHeader, bytes: &[u8]) -> Option<TCPHeader> {
 
         let data_offset = ((bytes[12] & 0xF0) >> 4) * 4;
+        let checksum = u16::from_be_bytes([bytes[16], bytes[17]]);
 
-        TCPHeader {
-            bytes: bytes[.. data_offset as usize - 1].to_vec(),
-            source_port: u16::from_be_bytes([bytes[0], bytes[1]]),
-            destination_port: u16::from_be_bytes([bytes[2], bytes[3]]),
-            sequence_number: u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]),
-            acknowledgement_number: u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]),
-            urg: (bytes[13] & 0b00100000) >> 5 == 1,
-            ark: (bytes[13] & 0b00010000) >> 4 == 1,
-            psh: (bytes[13] & 0b00001000) >> 3 == 1,
-            rst: (bytes[13] & 0b00000100) >> 2 == 1,
-            syn: (bytes[13] & 0b00000010) >> 1 == 1,
-            fin: (bytes[13] & 0b00000001) == 1,
-            window: u16::from_be_bytes([bytes[14], bytes[15]]),
-            checksum: u16::from_be_bytes([bytes[16], bytes[17]]),
-            urgent_ptr: u16::from_be_bytes([bytes[18], bytes[19]]),
-            options: vec!(),
-            data_offset,
+        if checksum != TCPHeader::calculate_checksum(ip_header.source_address, ip_header.destination_address, bytes) {
+            // Cancel if invalid checksum
+            return None;
         }
+
+        Some(
+            TCPHeader {
+                bytes: bytes[.. data_offset as usize - 1].to_vec(),
+                source_port: u16::from_be_bytes([bytes[0], bytes[1]]),
+                destination_port: u16::from_be_bytes([bytes[2], bytes[3]]),
+                sequence_number: u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]),
+                acknowledgement_number: u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]),
+                urg: (bytes[13] & 0b00100000) >> 5 == 1,
+                ark: (bytes[13] & 0b00010000) >> 4 == 1,
+                psh: (bytes[13] & 0b00001000) >> 3 == 1,
+                rst: (bytes[13] & 0b00000100) >> 2 == 1,
+                syn: (bytes[13] & 0b00000010) >> 1 == 1,
+                fin: (bytes[13] & 0b00000001) == 1,
+                window: u16::from_be_bytes([bytes[14], bytes[15]]),
+                checksum,
+                urgent_ptr: u16::from_be_bytes([bytes[18], bytes[19]]),
+                options: Vec::new(),
+                data_offset,
+            }
+        )
 
     }
 
-    pub fn validate(&self, ip_header: &IPHeader, bytes: &[u8]) -> bool {
+    pub fn calculate_checksum(source_address: u32, destination_address: u32, bytes: &[u8]) -> u16 {
 
         let data_length = bytes.len();
         let padding = data_length % 2;
@@ -115,17 +123,17 @@ impl TCPHeader {
         }
 
         // Add pseudo header sum
-        sum += ip_header.source_address >> 16;              // Highest 2 bytes of source address
-        sum += ip_header.source_address & 0xFFFF;           // Lowest 2 bytes of source address
-        sum += ip_header.destination_address >> 16;         // Highest 2 bytes of destination address
-        sum += ip_header.destination_address & 0xFFFF;      // Lowest 2 bytes of destination address
-        sum += 6 + ip_header.get_data_length() as u32;      // TCP protocol number + TCP data length
+        sum += source_address >> 16;                // Highest 2 bytes of source address
+        sum += source_address & 0xFFFF;             // Lowest 2 bytes of source address
+        sum += destination_address >> 16;           // Highest 2 bytes of destination address
+        sum += destination_address & 0xFFFF;        // Lowest 2 bytes of destination address
+        sum += 6 + bytes.len() as u32;              // TCP protocol number + TCP data length
 
         while sum >> 16 != 0 {
             sum = (sum & 0xFFFF) + (sum >> 16);
         }
 
-        self.checksum == !sum as u16
+        !sum as u16
 
     }
 
@@ -154,12 +162,12 @@ impl TCPHeaderBuilder {
             fin: false,
             window: 0,
             urgent_ptr: 0,
-            options: vec!(),
+            options: Vec::new(),
         }
 
     }
 
-    pub fn build(&self, ip_header_builder: &IPHeaderBuilder, data: &[u8]) -> TCPHeader {
+    pub fn build(&self, ip_header_builder: &IPHeaderBuilder, data: &[u8]) -> Option<TCPHeader> {
 
         let padding = (4 - self.options.len() % 4) % 4;
         let data_offset = 20 + self.options.len() + padding;
@@ -192,29 +200,40 @@ impl TCPHeaderBuilder {
         }
 
         if padding > 0 {
-            for i in 0 .. padding {
+            for _ in 0 .. padding {
                 bytes.push(0);
             }
         }
 
-        TCPHeader {
-            bytes,
-            source_port: self.source_port,
-            destination_port: self.destination_port,
-            sequence_number: self.sequence_number,
-            acknowledgement_number: self.acknowledgement_number,
-            data_offset: data_offset as u8,
-            urg: self.urg,
-            ark: self.ark,
-            psh: self.psh,
-            rst: self.rst,
-            syn: self.syn,
-            fin: self.fin,
-            window: self.window,
-            checksum: 0,
-            urgent_ptr: self.urgent_ptr,
-            options: self.options.clone(),
-        }
+        let mut tcp_section = bytes.clone();
+        tcp_section.extend_from_slice(data);
+
+        let checksum = TCPHeader::calculate_checksum(ip_header_builder.source_address, ip_header_builder.destination_address, &tcp_section[..]);
+        let checksum_bytes = checksum.to_be_bytes();
+
+        bytes[16] = checksum_bytes[0];
+        bytes[17] = checksum_bytes[1];
+
+        Some (
+            TCPHeader {
+                bytes,
+                source_port: self.source_port,
+                destination_port: self.destination_port,
+                sequence_number: self.sequence_number,
+                acknowledgement_number: self.acknowledgement_number,
+                data_offset: data_offset as u8,
+                urg: self.urg,
+                ark: self.ark,
+                psh: self.psh,
+                rst: self.rst,
+                syn: self.syn,
+                fin: self.fin,
+                window: self.window,
+                checksum,
+                urgent_ptr: self.urgent_ptr,
+                options: self.options.clone(),
+            }
+        )
 
     }
 

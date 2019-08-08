@@ -1,15 +1,13 @@
 // https://github.com/torvalds/linux/blob/master/Documentation/networking/tuntap.txt
 
-pub use crate::headers::ip_header::IPHeader;
-pub use crate::headers::tcp_header::TCPHeader;
-use crate::headers::ip_header::IPHeaderBuilder;
-use crate::headers::tcp_header::TCPHeaderBuilder;
+use crate::headers::ip_header::{IPHeader, IPHeaderBuilder};
+use crate::headers::tcp_header::{TCPHeader, TCPHeaderBuilder};
 
 pub struct Packet {
 
     pub ip_header: IPHeader,
     pub tcp_header: TCPHeader,
-    pub bytes: Vec<u8>,
+    pub bytes: Vec<u8>,                             // All headers and data
 
 }
 
@@ -17,7 +15,7 @@ pub struct PacketBuilder {
 
     pub ip_header_builder: IPHeaderBuilder,
     pub tcp_header_builder: TCPHeaderBuilder,
-    pub bytes: Vec<u8>,
+    pub bytes: Vec<u8>,                             // TCP-data only
 
 }
 
@@ -25,8 +23,8 @@ impl Packet {
 
     pub fn parse(bytes: [u8; 1504], bytes_read: usize) -> Option<Packet> {
 
-        let eth_flags: u16 = u16::from_be_bytes([bytes[0], bytes[1]]);    // First 2 bytes are TUN/TAP flags
-        let eth_proto: u16 = u16::from_be_bytes([bytes[2], bytes[3]]);    // Second 2 bytes are TUN/TAP proto
+        //let eth_flags: u16 = u16::from_be_bytes([bytes[0], bytes[1]]);    // First 2 bytes are TUN/TAP flags
+        let eth_proto: u16 = u16::from_be_bytes([bytes[2], bytes[3]]);      // Second 2 bytes are TUN/TAP proto
 
         if eth_proto != 0x0800 {
             // Skip if not IPv4
@@ -34,23 +32,17 @@ impl Packet {
         }
 
         // Parse internet header
-        let ip_header = IPHeader::parse(&bytes[4 .. bytes_read]);
+        let ip_header = match IPHeader::parse(&bytes[4 .. bytes_read]) {
+            Some(header) => header,
+            None => return None,
+        };
 
-        if !ip_header.validate() {
-            // Skip if internet header is invalid
-            return None;
-        }
-
-        // Slice bytes containing TCP header
+        // Slice bytes containing TCP header and parse it
         let tcp_header_bytes = &bytes[4 + ip_header.header_length as usize .. 4 + ip_header.total_length as usize];
-
-        // Parse TCP header
-        let tcp_header = TCPHeader::parse(tcp_header_bytes);
-
-        if !tcp_header.validate(&ip_header, tcp_header_bytes) {
-            // Skip if TCP header is invalid
-            return None;
-        }
+        let tcp_header = match TCPHeader::parse(&ip_header, tcp_header_bytes) {
+            Some(header) => header,
+            None => return None,
+        };
 
         Some(
             Packet {
@@ -82,28 +74,37 @@ impl PacketBuilder {
     pub fn new() -> PacketBuilder {
 
         PacketBuilder {
-            bytes: vec!(),
+            bytes: Vec::new(),
             ip_header_builder: IPHeaderBuilder::new(),
             tcp_header_builder: TCPHeaderBuilder::new(),
         }
 
     }
 
-    pub fn build(&self) -> Packet {
+    pub fn build(&self) -> Option<Packet> {
 
-        let tcp_header = self.tcp_header_builder.build(&self.ip_header_builder, &self.bytes[..]);
-        let ip_header = self.ip_header_builder.build(&tcp_header, self.bytes.len() as u16);
+        let tcp_header = match self.tcp_header_builder.build(&self.ip_header_builder, &self.bytes[..]) {
+            Some(header) => header,
+            None => return None,
+        };
 
-        let mut bytes = vec!();
+        let ip_header = match self.ip_header_builder.build(&tcp_header, self.bytes.len()) {
+            Some(header) => header,
+            None => return None,
+        };
+
+        let mut bytes = Vec::new();
         bytes.extend_from_slice(ip_header.get_bytes());
         bytes.extend_from_slice(tcp_header.get_bytes());
         bytes.extend_from_slice(&self.bytes);
 
-        Packet {
-            bytes,
-            ip_header,
-            tcp_header,
-        }
+        Some(
+            Packet {
+                bytes,
+                ip_header,
+                tcp_header,
+            }
+        )
 
     }
 
