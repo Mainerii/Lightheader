@@ -56,14 +56,14 @@ impl Packet {
 
     pub fn get_bytes(&self) -> &[u8] {
 
-        &self.bytes[.. self.ip_header.total_length as usize]
+        &self.bytes[.. 4 + self.ip_header.total_length as usize]
 
     }
 
     pub fn get_tcp_data(&self) -> &[u8] {
 
         // From TUN/TAP data length + data offset to TUN/TAP data length to packet end
-        &self.bytes[self.ip_header.header_length as usize + self.tcp_header.data_offset as usize .. self.ip_header.total_length as usize]
+        &self.bytes[4 + self.ip_header.header_length as usize + self.tcp_header.data_offset as usize .. 4 + self.ip_header.total_length as usize]
 
     }
 
@@ -93,7 +93,10 @@ impl PacketBuilder {
             None => return None,
         };
 
+        let eth_header = [0x00, 0x00, 0x08, 0x00];
+
         let mut bytes = Vec::new();
+        bytes.extend_from_slice(&eth_header);
         bytes.extend_from_slice(ip_header.get_bytes());
         bytes.extend_from_slice(tcp_header.get_bytes());
         bytes.extend_from_slice(&self.bytes);
