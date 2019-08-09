@@ -27,6 +27,7 @@ pub struct IPHeader {
     pub version: u8,                // Should be 4
     pub total_length: u16,          // Whole packet length
     pub header_length: u8,
+    pub header_checksum: u16,
     pub source_address: u32,
     pub destination_address: u32,
     pub options: Vec<u8>,
@@ -58,6 +59,7 @@ impl IPHeader {
             version: (bytes[0] & 0xF0) >> 4,
             header_length,
             total_length: u16::from_be_bytes([bytes[2], bytes[3]]),
+            header_checksum: u16::from_be_bytes([bytes[10], bytes[11]]),
             source_address: u32::from_be_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]),
             destination_address: u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]),
             options: Vec::new(),
@@ -69,6 +71,34 @@ impl IPHeader {
         }
 
         Some(ip_header)
+
+    }
+
+    pub fn calculate_checksum(bytes: &[u8]) -> u16 {
+
+        let data_length = bytes.len();
+        let padding = data_length % 2;
+
+        let mut sum: u32 = 0;
+
+        // Calculate sum of all TCP bytes as 16 bit words
+        for i in (0 .. data_length - padding).step_by(2) {
+            if i == 10 {
+                // Skip checksum
+                continue
+            }
+            sum += u16::from_be_bytes([bytes[i], bytes[i + 1]]) as u32;
+        }
+
+        if padding == 1 {
+            sum += u16::from_be_bytes([bytes[data_length - 1], 0x0]) as u32;
+        }
+
+        while sum >> 16 != 0 {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+
+        !sum as u16
 
     }
 
@@ -160,12 +190,19 @@ impl IPHeaderBuilder {
             }
         }
 
+        let header_checksum = IPHeader::calculate_checksum(&bytes[..]);
+        let header_checksum_bytes = header_checksum.to_be_bytes();
+
+        bytes[10] = header_checksum_bytes[0];
+        bytes[11] = header_checksum_bytes[1];
+
         Some(
             IPHeader {
                 bytes,
                 version: 4,
                 header_length: header_length as u8,
                 total_length: total_length as u16,
+                header_checksum,
                 source_address: self.source_address,
                 destination_address: self.destination_address,
                 options: self.options.clone(),
