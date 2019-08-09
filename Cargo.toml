@@ -2,6 +2,11 @@
 name = "lightheader"
 version = "0.0.1"
 authors = ["Joosua Koskinen <koskinen.joosua@gmail.com>"]
+description = "A very light TCP-packet parser."
 edition = "2018"
+include = [
+    "src/**/*.rs",
+    "Cargo.toml",
+]
 
 [dependencies]
