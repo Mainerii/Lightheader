@@ -37,7 +37,7 @@ pub struct TCPHeader {
     pub acknowledgement_number: u32,
     pub data_offset: u8,
     pub urg: bool,
-    pub ark: bool,
+    pub ack: bool,
     pub psh: bool,
     pub rst: bool,
     pub syn: bool,
@@ -56,7 +56,7 @@ pub struct TCPHeaderBuilder {
     pub sequence_number: u32,
     pub acknowledgement_number: u32,
     pub urg: bool,
-    pub ark: bool,
+    pub ack: bool,
     pub psh: bool,
     pub rst: bool,
     pub syn: bool,
@@ -87,7 +87,7 @@ impl TCPHeader {
                 sequence_number: u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]),
                 acknowledgement_number: u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]),
                 urg: (bytes[13] & 0b00100000) >> 5 == 1,
-                ark: (bytes[13] & 0b00010000) >> 4 == 1,
+                ack: (bytes[13] & 0b00010000) >> 4 == 1,
                 psh: (bytes[13] & 0b00001000) >> 3 == 1,
                 rst: (bytes[13] & 0b00000100) >> 2 == 1,
                 syn: (bytes[13] & 0b00000010) >> 1 == 1,
@@ -155,7 +155,7 @@ impl TCPHeaderBuilder {
             sequence_number: 0,
             acknowledgement_number: 0,
             urg: false,
-            ark: false,
+            ack: false,
             psh: false,
             rst: false,
             syn: false,
@@ -181,7 +181,7 @@ impl TCPHeaderBuilder {
 
         let mut flags: u8 = 0;
         flags += (self.urg as u8) << 5;
-        flags += (self.ark as u8) << 4;
+        flags += (self.ack as u8) << 4;
         flags += (self.psh as u8) << 3;
         flags += (self.rst as u8) << 2;
         flags += (self.syn as u8) << 1;
@@ -223,7 +223,7 @@ impl TCPHeaderBuilder {
                 acknowledgement_number: self.acknowledgement_number,
                 data_offset: data_offset as u8,
                 urg: self.urg,
-                ark: self.ark,
+                ack: self.ack,
                 psh: self.psh,
                 rst: self.rst,
                 syn: self.syn,

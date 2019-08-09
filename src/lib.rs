@@ -59,7 +59,7 @@ mod tests {
         assert_eq!(request_packet.tcp_header.acknowledgement_number, 0);
         assert_eq!(request_packet.tcp_header.data_offset, 40);
         assert_eq!(request_packet.tcp_header.urg, false);
-        assert_eq!(request_packet.tcp_header.ark, false);
+        assert_eq!(request_packet.tcp_header.ack, false);
         assert_eq!(request_packet.tcp_header.psh, false);
         assert_eq!(request_packet.tcp_header.rst, false);
         assert_eq!(request_packet.tcp_header.syn, true);
@@ -85,7 +85,7 @@ mod tests {
         packet_builder.tcp_header_builder.sequence_number = 2578391819;
         packet_builder.tcp_header_builder.acknowledgement_number = 50;
         packet_builder.tcp_header_builder.urg = true;
-        packet_builder.tcp_header_builder.ark = false;
+        packet_builder.tcp_header_builder.ack = false;
         packet_builder.tcp_header_builder.psh = true;
         packet_builder.tcp_header_builder.rst = false;
         packet_builder.tcp_header_builder.syn = true;
