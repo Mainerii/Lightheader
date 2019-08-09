@@ -44,11 +44,14 @@ impl Packet {
             None => return None,
         };
 
+        let mut packet_bytes = vec![0x00, 0x00, 0x08, 0x00];
+        packet_bytes.extend_from_slice(&bytes[4 .. bytes_read]);
+
         Some(
             Packet {
                 ip_header,
                 tcp_header,
-                bytes: (&bytes[4 .. bytes_read]).to_vec(),
+                bytes: packet_bytes,
             }
         )
 

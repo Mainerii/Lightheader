@@ -27,6 +27,7 @@ pub struct IPHeader {
     pub version: u8,                // Should be 4
     pub total_length: u16,          // Whole packet length
     pub header_length: u8,
+    pub ttl: u8,
     pub header_checksum: u16,
     pub source_address: u32,
     pub destination_address: u32,
@@ -39,6 +40,7 @@ pub struct IPHeaderBuilder {
 
     pub source_address: u32,
     pub destination_address: u32,
+    pub ttl: u8,
     pub options: Vec<u8>,
 
 }
@@ -59,6 +61,7 @@ impl IPHeader {
             version: (bytes[0] & 0xF0) >> 4,
             header_length,
             total_length: u16::from_be_bytes([bytes[2], bytes[3]]),
+            ttl: bytes[8],
             header_checksum: u16::from_be_bytes([bytes[10], bytes[11]]),
             source_address: u32::from_be_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]),
             destination_address: u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]),
@@ -145,6 +148,7 @@ impl IPHeaderBuilder {
         IPHeaderBuilder {
             source_address: 0,
             destination_address: 0,
+            ttl: 0,
             options: Vec::new(),
         }
 
@@ -175,7 +179,7 @@ impl IPHeaderBuilder {
         let mut bytes: Vec<u8> = vec!(
             0b01000000 + (header_length as u8 / 4), 0, total_length_bytes[0], total_length_bytes[1],
             0, 0, 0, 0,
-            0, 0, 0, 0,
+            self.ttl, 6, 0, 0,
             source_address[0], source_address[1], source_address[2], source_address[3],
             destination_address[0], destination_address[1], destination_address[2], destination_address[3],
         );
@@ -203,6 +207,7 @@ impl IPHeaderBuilder {
                 header_length: header_length as u8,
                 total_length: total_length as u16,
                 header_checksum,
+                ttl: self.ttl,
                 source_address: self.source_address,
                 destination_address: self.destination_address,
                 options: self.options.clone(),

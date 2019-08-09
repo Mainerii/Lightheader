@@ -48,6 +48,7 @@ mod tests {
         assert_eq!(request_packet.ip_header.total_length, 61);
         assert_eq!(request_packet.ip_header.header_length, 20);
         assert_eq!(request_packet.ip_header.get_data_length(), 41);
+        assert_eq!(request_packet.ip_header.ttl, 64);
         assert_eq!(request_packet.ip_header.source_address, 0xC0A80032);
         assert_eq!(request_packet.ip_header.get_source_address_str(), "192.168.0.50");
         assert_eq!(request_packet.ip_header.destination_address, 0xC0A80002);
@@ -79,6 +80,7 @@ mod tests {
 
         packet_builder.ip_header_builder.source_address = 0xC0A80032;
         packet_builder.ip_header_builder.destination_address = 0xC0A80002;
+        packet_builder.ip_header_builder.ttl = 64;
 
         packet_builder.tcp_header_builder.source_port = 46046;
         packet_builder.tcp_header_builder.destination_port = 443;
@@ -103,10 +105,10 @@ mod tests {
 
         let bytes: [u8; 49] = [
 
-            0x00, 0x00, 0x08, 0x00,
+            0x00, 0x00, 0x08, 0x00,                                     // Eth. header
 
             0x45, 0x00, 0x00, 0x2D, 0x00, 0x00, 0x00, 0x00,             // Internet header
-            0x00, 0x00, 0x39, 0x4D, 0xC0, 0xA8, 0x00, 0x32,
+            0x40, 0x06, 0xF9, 0x46, 0xC0, 0xA8, 0x00, 0x32,
             0xC0, 0xA8, 0x00, 0x02,
 
             0xB3, 0xDE, 0x01, 0xBB, 0x99, 0xAF, 0x23, 0x0B,             // TCP header
