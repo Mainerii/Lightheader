@@ -1,6 +1,6 @@
 [package]
 name = "lightheader"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Joosua Koskinen <koskinen.joosua@gmail.com>"]
 description = "A very light TCP-packet parser."
 edition = "2018"
