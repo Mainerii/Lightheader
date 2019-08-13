@@ -28,6 +28,7 @@ pub struct IPHeader {
     pub total_length: u16,          // Whole packet length
     pub header_length: u8,
     pub ttl: u8,
+    pub protocol: u8,
     pub header_checksum: u16,
     pub source_address: u32,
     pub destination_address: u32,
@@ -56,12 +57,20 @@ impl IPHeader {
             return None;
         }
 
+        let protocol = bytes[9];
+
+        if protocol != 6 {
+            // Not TCP
+            return None;
+        }
+
         let ip_header = IPHeader {
             bytes: bytes[.. header_length as usize].to_vec(),
             version: (bytes[0] & 0xF0) >> 4,
             header_length,
             total_length: u16::from_be_bytes([bytes[2], bytes[3]]),
             ttl: bytes[8],
+            protocol,
             header_checksum: u16::from_be_bytes([bytes[10], bytes[11]]),
             source_address: u32::from_be_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]),
             destination_address: u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]),
@@ -208,6 +217,7 @@ impl IPHeaderBuilder {
                 total_length: total_length as u16,
                 header_checksum,
                 ttl: self.ttl,
+                protocol: 6,
                 source_address: self.source_address,
                 destination_address: self.destination_address,
                 options: self.options.clone(),

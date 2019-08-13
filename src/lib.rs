@@ -49,6 +49,7 @@ mod tests {
         assert_eq!(request_packet.ip_header.header_length, 20);
         assert_eq!(request_packet.ip_header.get_data_length(), 41);
         assert_eq!(request_packet.ip_header.ttl, 64);
+        assert_eq!(request_packet.ip_header.protocol, 6);
         assert_eq!(request_packet.ip_header.source_address, 0xC0A80032);
         assert_eq!(request_packet.ip_header.get_source_address_str(), "192.168.0.50");
         assert_eq!(request_packet.ip_header.destination_address, 0xC0A80002);
